@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M9F5 — Anglerfish-Inspired Deep-Sea Explorer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --deep-black: #050508;
+            --ocean-blue: #0a0e1a;
+            --biolum-cyan: #00f0ff;
+            --biolum-teal: #00d4aa;
+            --biolum-blue: #0066ff;
+            --biolum-purple: #a855f7;
+            --biolum-pink: #ec4899;
+            --glass-bg: rgba(10, 14, 26, 0.6);
+            --glass-border: rgba(0, 240, 255, 0.15);
+            --text-primary: #e0f7ff;
+            --text-secondary: #8aa4b8;
+            --text-muted: #4a6070;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans Arabic', 'Space Grotesk', sans-serif;
+            background: var(--deep-black);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.8;
+        }
+        #particle-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--deep-black); }
+        ::-webkit-scrollbar-thumb { background: var(--biolum-cyan); border-radius: 3px; }
+        nav {
+            position: fixed; top: 0; width: 100%; z-index: 1000;
+            padding: 1rem 2rem; background: rgba(5, 5, 8, 0.8);
+            backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+        nav.scrolled { padding: 0.5rem 2rem; background: rgba(5, 5, 8, 0.95); }
+        .nav-container { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 900; background: linear-gradient(135deg, var(--biolum-cyan), var(--biolum-teal)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px; }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; transition: all 0.3s ease; position: relative; }
+        .nav-links a:hover { color: var(--biolum-cyan); }
+        .nav-links a::after { content: ''; position: absolute; bottom: -5px; left: 0; width: 0; height: 2px; background: var(--biolum-cyan); transition: width 0.3s ease; }
+        .nav-links a:hover::after { width: 100%; }
+        .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; padding: 6rem 2rem 2rem; overflow: hidden; }
+        .hero-content { max-width: 1200px; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; position: relative; z-index: 10; }
+        .hero-text { animation: fadeInUp 1s ease; }
+        .hero-badge { display: inline-block; padding: 0.5rem 1.5rem; background: rgba(0, 240, 255, 0.1); border: 1px solid var(--glass-border); border-radius: 50px; font-size: 0.85rem; color: var(--biolum-cyan); margin-bottom: 1.5rem; backdrop-filter: blur(10px); animation: glowPulse 2s ease-in-out infinite; }
+        .hero h1 { font-size: 3.5rem; font-weight: 900; line-height: 1.2; margin-bottom: 1.5rem; background: linear-gradient(135deg, #fff 0%, var(--biolum-cyan) 50%, var(--biolum-teal) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 2rem; max-width: 500px; }
+        .hero-buttons { display: flex; gap: 1rem; }
+        .btn-primary { padding: 1rem 2.5rem; background: linear-gradient(135deg, var(--biolum-cyan), var(--biolum-blue)); border: none; border-radius: 50px; color: var(--deep-black); font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s ease; }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 40px rgba(0, 240, 255, 0.3); }
+        .btn-secondary { padding: 1rem 2.5rem; background: transparent; border: 1px solid var(--glass-border); border-radius: 50px; color: var(--biolum-cyan); font-weight: 500; font-size: 1rem; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(10px); }
+        .btn-secondary:hover { background: rgba(0, 240, 255, 0.1); border-color: var(--biolum-cyan); }
+        .hero-visual { position: relative; animation: float 6s ease-in-out infinite; }
+        .hero-image { width: 100%; max-width: 500px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 240, 255, 0.2), 0 0 100px rgba(0, 240, 255, 0.1); border: 1px solid var(--glass-border); }
+        .glow-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120%; height: 120%; border: 1px solid rgba(0, 240, 255, 0.1); border-radius: 50%; animation: pulse 3s ease-in-out infinite; }
+        .glow-ring:nth-child(2) { width: 140%; height: 140%; animation-delay: 1s; }
+        .glow-ring:nth-child(3) { width: 160%; height: 160%; animation-delay: 2s; }
+        section { position: relative; z-index: 10; padding: 6rem 2rem; }
+        .section-container { max-width: 1200px; margin: 0 auto; }
+        .section-header { text-align: center; margin-bottom: 4rem; }
+        .section-header h2 { font-size: 2.5rem; font-weight: 900; margin-bottom: 1rem; background: linear-gradient(135deg, #fff, var(--biolum-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .section-header p { color: var(--text-secondary); font-size: 1.1rem; max-width: 600px; margin: 0 auto; }
+        .section-line { width: 60px; height: 3px; background: linear-gradient(90deg, var(--biolum-cyan), var(--biolum-teal)); margin: 1.5rem auto; border-radius: 2px; }
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 2rem; transition: all 0.4s ease; position: relative; overflow: hidden; }
+        .glass-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--biolum-cyan), transparent); opacity: 0.5; }
+        .glass-card:hover { transform: translateY(-10px); border-color: rgba(0, 240, 255, 0.3); box-shadow: 0 20px 60px rgba(0, 240, 255, 0.1); }
+        .glass-card h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; color: var(--biolum-cyan); }
+        .glass-card p { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.8; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+        .about-section { background: linear-gradient(180deg, var(--deep-black) 0%, rgba(0, 20, 40, 0.3) 100%); }
+        .about-content { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+        .about-image img { width: 100%; border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 102, 255, 0.2); }
+        .about-text h3 { font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--biolum-cyan); }
+        .about-text p { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 1.05rem; }
+        .highlight-box { background: rgba(0, 240, 255, 0.05); border-right: 3px solid var(--biolum-cyan); padding: 1.5rem; border-radius: 0 10px 10px 0; margin: 2rem 0; }
+        .highlight-box p { color: var(--text-primary); font-style: italic; margin: 0; }
+        .anatomy-section { background: var(--ocean-blue); }
+        .anatomy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+        .anatomy-image img { width: 100%; border-radius: 20px; border: 1px solid var(--glass-border); }
+        .anatomy-details { display: flex; flex-direction: column; gap: 1.5rem; }
+        .anatomy-item { display: flex; gap: 1.5rem; align-items: flex-start; padding: 1.5rem; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 15px; transition: all 0.3s ease; }
+        .anatomy-item:hover { border-color: var(--biolum-cyan); transform: translateX(-10px); }
+        .anatomy-item .number { font-size: 2rem; font-weight: 900; color: var(--biolum-cyan); opacity: 0.5; line-height: 1; }
+        .anatomy-item h4 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary); }
+        .anatomy-item p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }
+        .specs-section { background: var(--deep-black); }
+        .spec-card { text-align: center; padding: 2.5rem 2rem; }
+        .spec-value { font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, var(--biolum-cyan), var(--biolum-teal)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
+        .spec-label { color: var(--text-secondary); font-size: 0.9rem; }
+        .robot-section { background: linear-gradient(180deg, rgba(0, 20, 40, 0.3) 0%, var(--deep-black) 100%); }
+        .robot-showcase { display: grid; grid-template-columns: 1.2fr 1fr; gap: 4rem; align-items: center; }
+        .robot-image { width: 100%; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 0 60px rgba(0, 240, 255, 0.15); }
+        .robot-features { display: flex; flex-direction: column; gap: 1.5rem; }
+        .feature-item { display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 15px; transition: all 0.3s ease; }
+        .feature-item:hover { border-color: var(--biolum-cyan); transform: translateX(10px); }
+        .feature-icon { width: 50px; height: 50px; background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 102, 255, 0.2)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+        .feature-text h4 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .feature-text p { color: var(--text-secondary); font-size: 0.9rem; }
+        .nasa-section { background: var(--ocean-blue); position: relative; overflow: hidden; }
+        .nasa-content { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; position: relative; z-index: 10; }
+        .nasa-text h3 { font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--biolum-cyan); }
+        .nasa-text p { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 1.05rem; }
+        .nasa-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(0, 102, 255, 0.1); border: 1px solid rgba(0, 102, 255, 0.3); border-radius: 50px; font-size: 0.85rem; color: var(--biolum-blue); margin-bottom: 1rem; }
+        .nasa-image img { width: 100%; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 20px 60px rgba(0, 102, 255, 0.2); }
+        .team-section { background: var(--deep-black); }
+        .team-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3rem; max-width: 800px; margin: 0 auto; }
+        .team-card { text-align: center; padding: 3rem 2rem; }
+        .team-avatar { width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--biolum-cyan), var(--biolum-blue)); margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 3rem; box-shadow: 0 10px 40px rgba(0, 240, 255, 0.3); }
+        .team-card h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .team-role { color: var(--biolum-cyan); font-size: 0.9rem; margin-bottom: 1rem; }
+        .team-card p { color: var(--text-secondary); font-size: 0.95rem; }
+        .timeline-section { background: var(--ocean-blue); }
+        .timeline { position: relative; max-width: 800px; margin: 0 auto; }
+        .timeline::before { content: ''; position: absolute; top: 0; bottom: 0; right: 50%; width: 2px; background: linear-gradient(180deg, var(--biolum-cyan), var(--biolum-blue)); transform: translateX(50%); }
+        .timeline-item { display: flex; justify-content: flex-end; padding-right: 50%; position: relative; margin-bottom: 3rem; }
+        .timeline-item:nth-child(even) { justify-content: flex-start; padding-right: 0; padding-left: 50%; }
+        .timeline-content { background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 15px; padding: 1.5rem; max-width: 350px; margin: 0 2rem; position: relative; transition: all 0.3s ease; }
+        .timeline-content:hover { border-color: var(--biolum-cyan); transform: scale(1.05); }
+        .timeline-dot { position: absolute; top: 50%; right: -2.5rem; width: 16px; height: 16px; background: var(--biolum-cyan); border-radius: 50%; box-shadow: 0 0 20px rgba(0, 240, 255, 0.5); transform: translateY(-50%); }
+        .timeline-item:nth-child(even) .timeline-dot { right: auto; left: -2.5rem; }
+        .timeline-date { font-size: 0.85rem; color: var(--biolum-cyan); font-weight: 700; margin-bottom: 0.5rem; }
+        .timeline-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .timeline-desc { color: var(--text-secondary); font-size: 0.9rem; }
+        footer { background: var(--deep-black); border-top: 1px solid var(--glass-border); padding: 3rem 2rem; text-align: center; position: relative; z-index: 10; }
+        .footer-logo { font-size: 2rem; font-weight: 900; background: linear-gradient(135deg, var(--biolum-cyan), var(--biolum-teal)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
+        .footer-text { color: var(--text-muted); font-size: 0.9rem; }
+        .footer-links { display: flex; justify-content: center; gap: 2rem; margin-top: 1.5rem; }
+        .footer-links a { color: var(--text-secondary); text-decoration: none; transition: color 0.3s ease; }
+        .footer-links a:hover { color: var(--biolum-cyan); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        @keyframes pulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; } 50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; } }
+        @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 10px rgba(0, 240, 255, 0.2); } 50% { box-shadow: 0 0 30px rgba(0, 240, 255, 0.4); } }
+        .reveal { opacity: 0; transform: translateY(50px); transition: all 0.8s ease; }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        .comparison-table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
+        .comparison-table th { background: rgba(0, 240, 255, 0.1); padding: 1rem; text-align: right; border-bottom: 2px solid var(--glass-border); color: var(--biolum-cyan); font-weight: 700; }
+        .comparison-table td { padding: 1rem; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary); }
+        .comparison-table tr:hover td { background: rgba(0, 240, 255, 0.05); }
+        .wiring-image { width: 100%; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 20px 60px rgba(0, 240, 255, 0.1); }
+        .advice-card { border-color: rgba(168, 85, 247, 0.2); }
+        .advice-card:hover { border-color: rgba(168, 85, 247, 0.4); box-shadow: 0 20px 60px rgba(168, 85, 247, 0.1); }
+        .advice-card h3 { color: var(--biolum-purple); }
+        .advice-number { font-size: 3rem; font-weight: 900; color: var(--biolum-purple); opacity: 0.3; line-height: 1; margin-bottom: 0.5rem; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .gallery-item { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid var(--glass-border); transition: all 0.4s ease; }
+        .gallery-item:hover { transform: scale(1.05); border-color: var(--biolum-cyan); box-shadow: 0 20px 60px rgba(0, 240, 255, 0.2); }
+        .gallery-item img { width: 100%; height: 250px; object-fit: cover; display: block; }
+        .gallery-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem; background: linear-gradient(transparent, rgba(5, 5, 8, 0.9)); }
+        .gallery-overlay h4 { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+        .gallery-overlay p { font-size: 0.8rem; color: var(--text-secondary); }
+        .code-block { background: rgba(0, 0, 0, 0.5); border: 1px solid var(--glass-border); border-radius: 15px; padding: 1.5rem; font-family: 'Courier New', monospace; font-size: 0.85rem; color: var(--biolum-teal); overflow-x: auto; direction: ltr; text-align: left; }
+        @media (max-width: 1024px) {
+            .hero-content, .about-content, .anatomy-grid, .robot-showcase, .nasa-content { grid-template-columns: 1fr; }
+            .grid-3, .grid-4, .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero h1 { font-size: 2.5rem; }
+            .grid-2, .grid-3, .grid-4, .gallery-grid { grid-template-columns: 1fr; }
+            .team-grid { grid-template-columns: 1fr; }
+            .timeline::before { right: 20px; }
+            .timeline-item, .timeline-item:nth-child(even) { justify-content: flex-end; padding-right: 50px; padding-left: 0; }
+            .timeline-item:nth-child(even) .timeline-dot { right: -2.5rem; left: auto; }
+        }
+    </style>
+</head>
+<body>
+<canvas id="particle-canvas"></canvas>
+<nav id="navbar">
+    <div class="nav-container">
+        <div class="logo">M9F5</div>
+        <ul class="nav-links">
+            <li><a href="#about">عن المشروع</a></li>
+            <li><a href="#fish">السمكة</a></li>
+            <li><a href="#robot">الروبوت</a></li>
+            <li><a href="#nasa">ناسا</a></li>
+            <li><a href="#wiring">التوصيلات</a></li>
+            <li><a href="#advice">نصايح</a></li>
+            <li><a href="#team">الفريق</a></li>
+            <li><a href="#timeline">الخطة</a></li>
+        </ul>
+    </div>
+</nav>
+
+<section class="hero" id="home">
+    <div class="hero-content">
+        <div class="hero-text">
+            <div class="hero-badge">NASA Space Apps Challenge 2026</div>
+            <h1>من أعماق المحيطات<br>إلى محيطات الفضاء</h1>
+            <p>روبوت مستوحى من سمكة الأنجلر — يستكشف البيئات المظلمة والقاسية، من أعماق البحار إلى المحيط الجليدي تحت سطح قمر يوروبا.</p>
+            <div class="hero-buttons">
+                <button class="btn-primary" onclick="document.getElementById('about').scrollIntoView({behavior: 'smooth'})">اكتشف المشروع</button>
+                <button class="btn-secondary" onclick="document.getElementById('team').scrollIntoView({behavior: 'smooth'})">تعرف على الفريق</button>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="glow-ring"></div>
+            <div class="glow-ring"></div>
+            <div class="glow-ring"></div>
+            <img src="https://kimi-web-img.moonshot.cn/img/thumbs.dreamstime.com/5d8531a438205012612606ef2c0de2222bf90b44.jpg" alt="Anglerfish Bioluminescent" class="hero-image">
+        </div>
+    </div>
+</section>
+
+<section class="about-section" id="about">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>إيه الفكرة؟</h2>
+            <div class="section-line"></div>
+            <p>Biomimicry Engineering — لما الطبيعة تكون المهندس الأفضل</p>
+        </div>
+        <div class="about-content">
+            <div class="about-image reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/thumbs.dreamstime.com/66880f1d8b3d5bd086e0792b7d25cd5cb75b5f59.jpg" alt="Deep Sea Anglerfish Glowing">
+            </div>
+            <div class="about-text reveal">
+                <h3>ليه سمكة الأنجلر؟</h3>
+                <p>سمكة الأنجلر عاشت 50 مليون سنة في أعماق المحيطات — في ظلام دامس، ضغط هائل، وحرارة قريبة من التجمد. الطبيعة "هندست" كائن كامل يقدر يصيد، يتواصل، ويعيش في أقسى بيئة على الأرض.</p>
+                <p>إحنا بناخد كل التكيفات دي — الإضاءة الحيوية، الجسم المرن، آلية الصيد، واستراتيجية توفير الطاقة — ونحولها لـ روبوت مستقل يقدر يستكشف أماكن مفيش حد قدر يوصل لها.</p>
+                <div class="highlight-box">
+                    <p>"الطبيعة مش بس حلّت المشكلة — هي حلّتها بأقل طاقة ممكنة، وأعلى كفاءة ممكنة. ده اللي biomimicry بيعمله."</p>
+                </div>
+                <p>المشروع بيربط بين استكشاف الأرض (Earth) واستكشاف الفضاء (Space) — لأن المحيط الجليدي تحت قمر يوروبا بيشبه أعماق محيطاتنا بالظبط.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="gallery-section">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>معرض الصور</h2>
+            <div class="section-line"></div>
+            <p>من الواقع إلى المستقبل — رحلة الاستكشاف</p>
+        </div>
+        <div class="gallery-grid">
+            <div class="gallery-item reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/evolutionofplanetearth.com/0662583fd3f43f3cc75e22ab1a3f0ae35a0a1d6e.png" alt="Anglerfish Anatomy">
+                <div class="gallery-overlay"><h4>تشريح الأنجلر</h4><p>الإيسكا، الإليسيوم، الفك المتمدد</p></div>
+            </div>
+            <div class="gallery-item reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/assets.science.nasa.gov/9bb6eb14c9d3f55c75ae730016a8f38b3a17b6e8.jpg" alt="Europa Ice Ocean">
+                <div class="gallery-overlay"><h4>محيط يوروبا</h4><p>قمر المشتري الجليدي</p></div>
+            </div>
+            <div class="gallery-item reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/www.itu.int/81283cf30a5fd46eec836e7023a85841efd6fe8d.jpg" alt="Underwater Robot">
+                <div class="gallery-overlay"><h4>روبوت تحت الماء</h4><p>تقنيات الاستكشاف العميق</p></div>
+            </div>
+            <div class="gallery-item reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/d2pn8kiwq2w21t.cloudfront.net/b24959c9b4b65f5dda7c2bf6ca4fcd1ad8b2d7d3.jpg" alt="Europa Clipper">
+                <div class="gallery-overlay"><h4>Europa Clipper</h4><p>مهمة ناسا لاستكشاف يوروبا</p></div>
+            </div>
+            <div class="gallery-item reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/oceanexplorer.noaa.gov/865f88a2d6a4620db12c2dbc82145da218e511a2.jpg" alt="NOAA ROV">
+                <div class="gallery-overlay"><h4>NOAA ROV</h4><p>مركبات الاستكشاف العميق</p></div>
+            </div>
+            <div class="gallery-item reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/caltech-prod.resources.caltech.edu/87f7b921bd5edea241206d83bb1950167031557a.jpg" alt="Europa Ocean">
+                <div class="gallery-overlay"><h4>محيط يوروبا</h4><p>نموذج فني لما تحت الجليد</p></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="anatomy-section" id="fish">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>تشريح السمكة</h2>
+            <div class="section-line"></div>
+            <p>كل جزء في جسم الأنجلر فيه secret — وكل secret ده فكرة للروبوت</p>
+        </div>
+        <div class="anatomy-grid">
+            <div class="anatomy-image reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/evolutionofplanetearth.com/0662583fd3f43f3cc75e22ab1a3f0ae35a0a1d6e.png" alt="Anglerfish Anatomy">
+            </div>
+            <div class="anatomy-details">
+                <div class="anatomy-item reveal">
+                    <div class="number">01</div>
+                    <div>
+                        <h4>الإيسكا (Esca) — العضو المضيء</h4>
+                        <p>بكتيريا متعايشة داخل كتلة لحمية بتنتج ضوء أزرق-أخضر. الكفاءة 95% — مقارنة بـ 5% بس في المصباح العادي. الروبوت هايستخدم LED array بنفس الطيف الضوئي.</p>
+                    </div>
+                </div>
+                <div class="anatomy-item reveal">
+                    <div class="number">02</div>
+                    <div>
+                        <h4>الإليسيوم (Illicium) — عصا الصيد</h4>
+                        <p>زعنفة ظهرية تحولت لذراع مرنة تنتهي بالإيسكا. بتتحرك ببطء ذهاب وإياب عشان تجذب الفريسة. الروبوت هايستخدم robotic arm مرن بنفس الفكرة.</p>
+                    </div>
+                </div>
+                <div class="anatomy-item reveal">
+                    <div class="number">03</div>
+                    <div>
+                        <h4>الفك المتمدد</h4>
+                        <p>يفتح بزاوية 120° أو أكتر، ويبتلع فريسة ضعف حجم السمكة. الأسنان متجهة للداخل — زي "صمام" one-way. الروبوت هايستخدم gripper mechanism بنفس التصميم.</p>
+                    </div>
+                </div>
+                <div class="anatomy-item reveal">
+                    <div class="number">04</div>
+                    <div>
+                        <h4>الجسم المرن</h4>
+                        <p>جلد ناعم ومرن، عظام خفيفة، ومعدة قابلة للتمدد. ده بيسمح للسمكة تتحمل ضغط 200 atm على عمق 2000 متر. الروبوت هايستخدم silicone body + pressure-resistant hull.</p>
+                    </div>
+                </div>
+                <div class="anatomy-item reveal">
+                    <div class="number">05</div>
+                    <div>
+                        <h4>استراتيجية الانتظار (Sit-and-Wait)</h4>
+                        <p>مش بيسبحوا كتير — بيطفوا بشكل سلبي وينتظروا الفريسة. معدل الأيض (Metabolism) بطيء بنسبة 30% عن أسماك السطح. الروبوت هايستخدم sleep mode ذكي.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="specs-section">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>أرقام من أعماق البحار</h2>
+            <div class="section-line"></div>
+        </div>
+        <div class="grid-4">
+            <div class="glass-card spec-card reveal">
+                <div class="spec-value">200+</div>
+                <div class="spec-label">نوع من الأنجلر</div>
+            </div>
+            <div class="glass-card spec-card reveal">
+                <div class="spec-value">4000</div>
+                <div class="spec-label">متر أقصى عمق (متر)</div>
+            </div>
+            <div class="glass-card spec-card reveal">
+                <div class="spec-value">200</div>
+                <div class="spec-label">atm ضغط على 2000م</div>
+            </div>
+            <div class="glass-card spec-card reveal">
+                <div class="spec-value">1-4</div>
+                <div class="spec-label">°C درجة الحرارة</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="robot-section" id="robot">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>الروبوت: AQUA-EYE</h2>
+            <div class="section-line"></div>
+            <p>من Biology إلى Engineering — كل تكيف بقى ميزة تقنية</p>
+        </div>
+        <div class="robot-showcase">
+            <div class="robot-image-container reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/www.itu.int/81283cf30a5fd46eec836e7023a85841efd6fe8d.jpg" alt="Underwater Robot Concept" class="robot-image">
+            </div>
+            <div class="robot-features">
+                <div class="feature-item reveal">
+                    <div class="feature-icon">💡</div>
+                    <div class="feature-text">
+                        <h4>نظام الإضاءة الذكي</h4>
+                        <p>LED array بطيف أزرق-أخضر (460-530 nm) يحاكي bioluminescence. تحكم برمجي في شدة الضوء وتردد الوميض — بيستهلك طاقة ضئيلة جداً.</p>
+                    </div>
+                </div>
+                <div class="feature-item reveal">
+                    <div class="feature-icon">🤖</div>
+                    <div class="feature-text">
+                        <h4>ذراع مرنة (Robotic Illicium)</h4>
+                        <p>Micro-actuators بتتحكم في حركة ذراع مرنة تنتهي بـ LED lure. Force feedback بيحس مقاومة المية ويعدل الحركة.</p>
+                    </div>
+                </div>
+                <div class="feature-item reveal">
+                    <div class="feature-icon">🔧</div>
+                    <div class="feature-text">
+                        <h4>آلية جمع العينات</h4>
+                        <p>Spring-release mechanism لسرعة انقضاض عالية. Expandable chamber لحفظ العينات. One-way locking زي أسنان الأنجلر.</p>
+                    </div>
+                </div>
+                <div class="feature-item reveal">
+                    <div class="feature-icon">📡</div>
+                    <div class="feature-text">
+                        <h4>الاتصال والملاحة</h4>
+                        <p>Acoustic modem للاتصال تحت المية. Lateral line sensors (pressure array) لكشف الاهتزازات. Sonar miniaturized للتنقل في الظلام.</p>
+                    </div>
+                </div>
+                <div class="feature-item reveal">
+                    <div class="feature-icon">🔋</div>
+                    <div class="feature-text">
+                        <h4>توفير الطاقة</h4>
+                        <p>ESP32-S3 in deep-sleep mode. بيصحى بس لما sensors تكشف حركة أو تغير في البيئة. بطاريات Li-ion عالية الكثافة.</p>
+                    </div>
+                </div>
+                <div class="feature-item reveal">
+                    <div class="feature-icon">🛡️</div>
+                    <div class="feature-text">
+                        <h4>مقاومة الضغط</h4>
+                        <p>Pressure hull من aluminum 6061 مع silicone coating. 3D-printed resin body. يقدر يغوص لـ 300 متر في الـ prototype.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="nasa-section" id="nasa">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>الربط مع ناسا</h2>
+            <div class="section-line"></div>
+            <p>من المحيطات على الأرض إلى المحيطات في الفضاء</p>
+        </div>
+        <div class="nasa-content">
+            <div class="nasa-text reveal">
+                <div class="nasa-badge">🚀 Europa Clipper Mission</div>
+                <h3>لي ناسا هتهتم بالمشروع ده؟</h3>
+                <p>ناسا بتركز على <strong>Ocean Worlds</strong> — أماكن في الفضاء فيها محيطات مائية تحت سطح جليدي. أهمها قمر يوروبا (Europa) اللي بيدور حوالين كوكب المشتري.</p>
+                <p>تحت سطح يوروبا الجليدي فيه محيط عميق — ممكن يكون فيه حياة. بس المشكلة: إزاي نستكشف محيط مظلم، ضغطه عالي، وحرارته قريبة من التجمد؟</p>
+                <p>الإجابة: <strong>نقلد الكائنات اللي عاشت في نفس الظروف دي على الأرض.</strong> سمكة الأنجلر عاشت 50 مليون سنة في أعماق المحيطات — في ظلام، ضغط، وبرودة. كل تكيف في جسمها = حل هندسي لمشكلة زيها على يوروبا.</p>
+                <div class="highlight-box">
+                    <p>"الأرض هي المختبر. المحيطات العميقة هي analog للبيئات الفضائية. اللي نتعلمه هنا هناك هنستخدمه هناك."</p>
+                </div>
+            </div>
+            <div class="nasa-image reveal">
+                <img src="https://kimi-web-img.moonshot.cn/img/assets.science.nasa.gov/9bb6eb14c9d3f55c75ae730016a8f38b3a17b6e8.jpg" alt="Europa Ice Ocean NASA">
+            </div>
+        </div>
+        <div class="grid-3" style="margin-top: 4rem;">
+            <div class="glass-card reveal">
+                <span class="icon">🌍</span>
+                <h3>Earth Analog</h3>
+                <p>أعماق المحيطات على الأرض = نفس ظروف محيطات الفضاء. بنختبر التكنولوجيا هنا قبل ما نبعتها للفضاء.</p>
+            </div>
+            <div class="glass-card reveal">
+                <span class="icon">🔬</span>
+                <h3>Life Detection</h3>
+                <p>الروبوت بيجمع عينات ويحللها للبحث عن علامات الحياة (biosignatures) — نفس الهدف على يوروبا.</p>
+            </div>
+            <div class="glass-card reveal">
+                <span class="icon">📊</span>
+                <h3>NASA Data</h3>
+                <p>بنستخدم بيانات NASA Earthdata وOcean Color للمقارنة بين بيئات الأرض والفضاء.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="specs-section">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>مقارنة: الأنجلر vs الروبوتات الحالية</h2>
+            <div class="section-line"></div>
+        </div>
+        <div class="glass-card reveal" style="overflow-x: auto;">
+            <table class="comparison-table">
+                <thead>
+                    <tr><th>الخاصية</th><th>سمكة الأنجلر</th><th>ROV / AUV التقليدي</th><th>AQUA-EYE (مشروعنا)</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>مصدر الطاقة</td><td>أيض بيولوجي بطيء</td><td>بطارية محدودة أو كابل</td><td>Li-ion + sleep mode ذكي</td></tr>
+                    <tr><td>الحركة</td><td>انتظار + انقضاض نبضي</td><td>دفع مستمر بالمراوح</td><td>Biomimetic fin propulsion</td></tr>
+                    <tr><td>الإضاءة</td><td>بيولوجية داخلية موفرة</td><td>مصابيح قوية تستنزف الطاقة</td><td>LED array موفر + تحكم برمجي</td></tr>
+                    <tr><td>التمويه</td><td>ممتاز (أسود، صغير)</td><td>ضعيف (معدن لامع)</td><td>Silicone body داكن + مرن</td></tr>
+                    <tr><td>الاستشعار</td><td>حسي متعدد الأبعاد</td><td>أجهزة إلكترونية نمطية</td><td>Lateral line + sonar + camera</td></tr>
+                    <tr><td>التكلفة</td><td>لا تنطبق</td><td>ملايين الدولارات</td><td>~$100 (prototype)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section class="wiring-section" id="wiring">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>مخطط التوصيلات</h2>
+            <div class="section-line"></div>
+            <p>ESP32-S3 N16R8 — التصميم الكامل للـ hardware</p>
+        </div>
+        <div class="reveal">
+            <img src="M9F5_Wiring_Diagram_v2.png" alt="M9F5 Wiring Diagram" class="wiring-image">
+        </div>
+        <div class="grid-2" style="margin-top: 3rem;">
+            <div class="glass-card reveal">
+                <h3>🔌 Power Architecture</h3>
+                <p>2x 18650 Li-ion (7.4V) → Buck Converter (LM2596) → 5V → LDO (AMS1117) → 3.3V. BMS protection + TP4056 charging. 1000µF cap for servo spike protection.</p>
+            </div>
+            <div class="glass-card reveal">
+                <h3>📡 Communication Stack</h3>
+                <p>Acoustic Modem (piezo @ 40kHz, 10-50m range, 100-500 bps) → LoRa (surface, 1-5km) → WiFi (recovery, 100m) → SD Card (data logger, 32GB+).</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="specs-section">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>كود ESP32 — Sleep Mode</h2>
+            <div class="section-line"></div>
+            <p>استراتيجية توفير الطاقة زي الأنجلر</p>
+        </div>
+        <div class="code-block reveal">
+// M9F5 AQUA-EYE — Sleep Mode Strategy
+// Inspired by Anglerfish sit-and-wait behavior
+
+#include &lt;esp_sleep.h&gt;
+#include &lt;driver/rtc_io.h&gt;
+
+void setup() {
+    // Initialize sensors
+    initSensors();
+    initLEDArray();
+    initCommunication();
+
+    // Set wake-up sources: motion detection or timer
+    esp_sleep_enable_ext0_wakeup(GPIO_NUM_25, 1);  // Motion sensor
+    esp_sleep_enable_timer_wakeup(300 * 1000000);  // 5 minutes max
+}
+
+void loop() {
+    // Check if prey detected (motion in water)
+    if (detectMotion() || detectChemicalChange()) {
+        wakeUp();
+        activateLure();
+        collectSample();
+        transmitData();
+    }
+
+    // Enter deep sleep — like anglerfish waiting
+    enterDeepSleep();
+}
+
+void enterDeepSleep() {
+    // Save state to RTC memory
+    rtcMemory.depth = currentDepth;
+    rtcMemory.batteryLevel = getBatteryLevel();
+
+    // Power off all non-essential peripherals
+    digitalWrite(LED_PIN, LOW);
+    digitalWrite(PUMP_PIN, LOW);
+
+    // Enter deep sleep — 0.1mA consumption
+    esp_deep_sleep_start();
+}
+        </div>
+    </div>
+</section>
+
+<section class="advice-section" id="advice">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>💜 نصايح لفاطمة</h2>
+            <div class="section-line"></div>
+            <p>من ميمو — للشخص اللي شغوف فشخ وأذكى من M19</p>
+        </div>
+        <div class="grid-3">
+            <div class="glass-card advice-card reveal">
+                <div class="advice-number">01</div>
+                <h3>انتِ الـ Research Lead</h3>
+                <p>فاطمة، إنتِ اللي هتجيبي الـ scientific backing للمشروع. كل claim لازم يكون وراه paper أو مصدر موثوق. NASA بتحب الـ data-driven arguments. استخدمي Google Scholar + arXiv + PubMed.</p>
+            </div>
+            <div class="glass-card advice-card reveal">
+                <div class="advice-number">02</div>
+                <h3>الـ Biomimicry Story</h3>
+                <p>القصة هي 50% من المشروع. لازم تقدري تشرحي لـ judges ليه الأنجلر تحديداً — مش أي سمكة تانية. ركزي على: الـ extreme adaptation، الـ efficiency، والـ uniqueness. ده اللي هيميزكم.</p>
+            </div>
+            <div class="glass-card advice-card reveal">
+                <div class="advice-number">03</div>
+                <h3>الـ Pitch Deck</h3>
+                <p>الـ presentation لازم يكون 10 slides بس: Problem → Solution → NASA Relevance → Demo → Data → Team → Future. مفيش حد بيقرأ 50 slide. Keep it tight, visual, and memorable.</p>
+            </div>
+            <div class="glass-card advice-card reveal">
+                <div class="advice-number">04</div>
+                <h3>الـ Prototype Priority</h3>
+                <p>Working demo > perfect presentation. لو الروبوت بيتحرك في bucket of water وبيشغل الـ LEDs — ده أحسن من 1000 slide. Judges بيحبوا الـ hands-on. حتى لو بسيط، خليه يشتغل.</p>
+            </div>
+            <div class="glass-card advice-card reveal">
+                <div class="advice-number">05</div>
+                <h3>الـ Team Dynamics</h3>
+                <p>أنتِ وM19 — كل واحد فيكم ليه strength. M19 بيبني hardware، إنتِ بتعملي research وpitch. متدخلوش في شغل بعض. Trust each other. الـ synergy ده اللي هيبان للjudges.</p>
+            </div>
+            <div class="glass-card advice-card reveal">
+                <div class="advice-number">06</div>
+                <h3>الـ Backup Plan</h3>
+                <p>الـ prototype ممكن يتعطل في الـ hackathon. جهزي: video demo (pre-recorded)، screenshots، data logs، وpitch without hardware. Always have a Plan B. NASA engineers بيحبوا الـ redundancy.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="team-section" id="team">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>فريق M9F5</h2>
+            <div class="section-line"></div>
+            <p>مهندسين شغوفين بيحاولوا يبنوا المستحيل</p>
+        </div>
+        <div class="team-grid">
+            <div class="glass-card team-card reveal">
+                <div class="team-avatar">M19</div>
+                <h3>محمد (M19)</h3>
+                <div class="team-role">Hardware & Software Lead</div>
+                <p>مهندس روبوتات وembedded systems. بيبني كل حاجة من خردة — من ESP32 لـ drones. شغوف بـ biomimicry وعايز يبني Iron Man toolkit بـ $0.</p>
+            </div>
+            <div class="glass-card team-card reveal">
+                <div class="team-avatar">F5</div>
+                <h3>فاطمة</h3>
+                <div class="team-role">Robotics & Research Lead</div>
+                <p>شغوفة فشخ بعلوم البحار والروبوتات. عندها رؤية واضحة لازم الروبوت يغطس للأعماق ويستكشف المحيطات والأمازون. أذكى من M19.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="timeline-section" id="timeline">
+    <div class="section-container">
+        <div class="section-header reveal">
+            <h2>الخطة والـ Timeline</h2>
+            <div class="section-line"></div>
+            <p>رحلتنا من الفكرة لـ NASA Space Apps Challenge</p>
+        </div>
+        <div class="timeline">
+            <div class="timeline-item reveal">
+                <div class="timeline-content">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-date">يوليو 2026</div>
+                    <div class="timeline-title">التسجيل والتخطيط</div>
+                    <div class="timeline-desc">تسجيل الفريق في NASA Space Apps Challenge. اختيار الـ Local Event (Egypt أو Virtual). تحديد الـ Challenge المناسب.</div>
+                </div>
+            </div>
+            <div class="timeline-item reveal">
+                <div class="timeline-content">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-date">أغسطس - أكتوبر</div>
+                    <div class="timeline-title">بناء الـ Prototype</div>
+                    <div class="timeline-desc">تصميم الـ 3D model. برمجة الـ ESP32. تجميع الـ hardware (sensors, LEDs, camera). اختبار في bucket of water.</div>
+                </div>
+            </div>
+            <div class="timeline-item reveal">
+                <div class="timeline-content">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-date">14-15 نوفمبر</div>
+                    <div class="timeline-title">الهاكاثون</div>
+                    <div class="timeline-desc">48 ساعة شغل متواصل. تقديم الـ pitch + demo. عرض الـ prototype والبيانات اللي جمعها.</div>
+                </div>
+            </div>
+            <div class="timeline-item reveal">
+                <div class="timeline-content">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-date">ديسمبر 2026</div>
+                    <div class="timeline-title">النتائج</div>
+                    <div class="timeline-desc">الإعلان عن الفائزين. لو كسبنا — ترشيح للتحكيم العالمي من NASA. Recognition دولي للمشروع.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-logo">M9F5</div>
+    <p class="footer-text">Anglerfish-Inspired Deep-Sea Explorer — NASA Space Apps Challenge 2026</p>
+    <p class="footer-text" style="margin-top: 0.5rem;">مشروع بين محمد (M19) وفاطمة — بناءً على بحث علمي شامل</p>
+    <div class="footer-links">
+        <a href="#about">عن المشروع</a>
+        <a href="#fish">السمكة</a>
+        <a href="#robot">الروبوت</a>
+        <a href="#nasa">ناسا</a>
+        <a href="#team">الفريق</a>
+    </div>
+    <p class="footer-text" style="margin-top: 2rem; font-size: 0.8rem;">© 2026 M9F5 Team. Built with passion, curiosity, and a lot of coffee.</p>
+</footer>
+
+<script>
+// Particle System
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let mouseX = 0, mouseY = 0;
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+
+class Particle {
+    constructor() { this.reset(); }
+    reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = canvas.height + Math.random() * 100;
+        this.size = Math.random() * 3 + 1;
+        this.speedY = Math.random() * 1 + 0.5;
+        this.speedX = (Math.random() - 0.5) * 0.5;
+        this.opacity = Math.random() * 0.5 + 0.2;
+        this.color = Math.random() > 0.5 ? '#00f0ff' : '#00d4aa';
+        this.life = 0;
+        this.maxLife = Math.random() * 200 + 100;
+    }
+    update() {
+        this.y -= this.speedY;
+        this.x += this.speedX + Math.sin(this.life * 0.02) * 0.5;
+        this.life++;
+        const dx = mouseX - this.x, dy = mouseY - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) { this.x -= dx * 0.01; this.y -= dy * 0.01; }
+        if (this.y < -10 || this.life > this.maxLife) this.reset();
+    }
+    draw() {
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = this.color; ctx.globalAlpha = this.opacity * (1 - this.life / this.maxLife); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+        ctx.fillStyle = this.color; ctx.globalAlpha = this.opacity * 0.1; ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+for (let i = 0; i < 80; i++) particles.push(new Particle());
+document.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => { p.update(); p.draw(); });
+    requestAnimationFrame(animate);
+}
+animate();
+
+// Navbar scroll effect
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+    if (window.scrollY > 50) navbar.classList.add('scrolled');
+    else navbar.classList.remove('scrolled');
+});
+
+// Scroll reveal
+const revealElements = document.querySelectorAll('.reveal');
+const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('active'); });
+}, { threshold: 0.1 });
+revealElements.forEach(el => revealObserver.observe(el));
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelector(this.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
+    });
+});
+
+// Parallax
+window.addEventListener('scroll', () => {
+    const scrolled = window.pageYOffset;
+    const heroVisual = document.querySelector('.hero-visual');
+    if (heroVisual) heroVisual.style.transform = `translateY(${scrolled * 0.3}px)`;
+});
+</script>
+</body>
+</html>
